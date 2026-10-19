@@ -1,3 +1,76 @@
+<script>
+    // Koordinatės (Palanga / Lietuvos pajūris)
+    const lat = 55.9175;
+    const lng = 21.0686;
+
+    // Tikslus saulės tekėjimo ir leidimosi skaičiavimas tiesiogiai naršyklėje (nereikia išorinio API)
+    function calculateSunTimes(latitude, longitude) {
+      const now = new Date();
+      const startOfYear = new Date(now.getFullYear(), 0, 0);
+      const diff = now - startOfYear;
+      const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      const toRad = Math.PI / 180;
+      const toDeg = 180 / Math.PI;
+
+      function getSunEventTime(isSunrise) {
+        const lngHour = longitude / 15;
+        const t = isSunrise ? dayOfYear + ((6 - lngHour) / 24) : dayOfYear + ((18 - lngHour) / 24);
+        const M = (0.9856 * t) - 3.289;
+        let L = M + (1.916 * Math.sin(M * toRad)) + (0.020 * Math.sin(2 * M * toRad)) + 282.634;
+        L = (L + 360) % 360;
+
+        let RA = toDeg * Math.atan(0.91764 * Math.tan(L * toRad));
+        RA = (RA + 360) % 360;
+        const Lquadrant = Math.floor(L / 90) * 90;
+        const RAquadrant = Math.floor(RA / 90) * 90;
+        RA = RA + (Lquadrant - RAquadrant);
+        RA = RA / 15;
+
+        const sinDec = 0.39782 * Math.sin(L * toRad);
+        const cosDec = Math.cos(Math.asin(sinDec));
+        const cosH = (Math.cos(90.833 * toRad) - (sinDec * Math.sin(latitude * toRad))) / (cosDec * Math.cos(latitude * toRad));
+
+        if (cosH > 1 || cosH < -1) return null; // Poliarinė diena / naktis
+
+        let H = isSunrise ? 360 - (toDeg * Math.acos(cosH)) : toDeg * Math.acos(cosH);
+        H = H / 15;
+
+        const T = H + RA - (0.06571 * t) - 6.622;
+        let UT = (T - lngHour + 24) % 24;
+
+        const date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), Math.floor(UT), Math.round((UT % 1) * 60)));
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      const sunrise = getSunEventTime(true);
+      const sunset = getSunEventTime(false);
+
+      if (sunrise && sunset) {
+        document.getElementById('sun').innerHTML = `Tekėjimas: <span style="color:#f2cc60">${sunrise}</span> &nbsp;|&nbsp; Leidimasis: <span style="color:#f2cc60">${sunset}</span>`;
+      } else {
+        document.getElementById('sun').innerText = 'Nepavyko apskaičiuoti saulės laiko';
+      }
+    }
+
+    calculateSunTimes(lat, lng);
+
+    // Komandų kopijavimo funkcija
+    function copyCode(btn) {
+      const codeElement = btn.closest('.cmd-group').querySelector('pre code');
+      const textToCopy = codeElement.innerText;
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        const originalText = btn.innerText;
+        btn.innerText = 'Nukopijuota!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.innerText = originalText;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+  </script>
 <!DOCTYPE html>
 <html lang="lt">
 <head>
